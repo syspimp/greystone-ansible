@@ -27,15 +27,15 @@ while getopts ":b:nh" opt; do
   esac
 done
 
-# Delete old graph, if exists
-if [[ -e "/tmp/${name}.rrd" ]]
-then
-  echo "Removing old graph file"
-  rm -f "/tmp/${name}.rrd"
-fi
-
 if [[ ! -z "${bulk}" ]]
 then
+  # Delete old graph, if exists
+  if [[ -e "/tmp/${name}.rrd" ]]
+  then
+    echo "Removing old graph file"
+    rm -f "/tmp/${name}.rrd"
+  fi
+
   echo "bulk importing power usage for months ${bulk} for the year ${year}"
   sleep 5
   for month in ${bulk};
