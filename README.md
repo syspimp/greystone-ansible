@@ -49,10 +49,10 @@ Well, I will certainly save money over time with my new HVAC. My consumption dro
 However, the data seems to suggest that I only eliminate consuming utility power when I produce over 1.5 to 2 kwh of energy, which is basically on a bright, clear, cloudless day, EVEN THOUGH I may only be consuming 0.5 kwh as reported by the utility company. I wonder why this is? Is this the result of electrical resistance? Is there an electrical barrier or wave to overcome, like when rushing creek water meets a river, and the river wants to push into the creek? At some point it equalizes, the water becomes one, and then flows together into the larger river. Once I cross this threshold does the "resistance" drop to my energy production drop according to some function? I have noticed my meter stopped when it is supposed to be running backwards. Hmmm.
 
 Below (and above) is a screen shot of a 4 day period of my energy production and consumption.
-Top, first graph: Generated Solar Power in Watts
-Next, second graph: Total Power generated for the day in Watts
-Next, third graph: Power consumed from Utility, measured in negative Watts
-**Last, forth graph: Power produced laid on top of power consumed, stacked.**
+* Top, first graph: Generated Solar Power in Watts
+* Next, second graph: Total Power generated for the day in Watts
+* Next, third graph: Power consumed from Utility, measured in negative Watts
+* **Last, forth graph: Power produced laid on top of power consumed, stacked.**
 
 The last graph is the important one.
 
