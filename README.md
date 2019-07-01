@@ -67,6 +67,7 @@ Requires: `ansible, python3, and python3-rrdtool` (or python and python-rrdtool 
 Only tested on Fedora 30 and ansible 2.8, but your mileage may vary.
 
 To use this, edit the `group_vars/all` file with your greystone information and then run the playbook. A sample installation and use would go like this:
+```
     # clone the code
     git clone https://github.com/syspimp/greystone-ansible.git
     cd greystone-ansible
@@ -76,7 +77,7 @@ To use this, edit the `group_vars/all` file with your greystone information and 
 	ansible-playbook -i inventory site.yml
     # check the output
    firefox file:///tmp/yourgraphname.png 
-
+```
 The rrd file and a simple graph will be in /tmp with whatever graph name you set in the `group_vars/all` file.
 
 Once you have that working, you can modify and use the included shell script to bulk import and then add daily usage to a rrd file.
