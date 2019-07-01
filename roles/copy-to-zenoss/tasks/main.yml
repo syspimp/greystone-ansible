@@ -14,7 +14,7 @@
     - name: "Copy rrd file to Zenoss filesystem"
       copy: 
         src: "/tmp/{{ greystone_graph_name }}.rrd"
-        dest: "/opt/zenoss/perf/Devices/{{ zenoss4_device }}/"
+        dest: "/opt/zenoss/perf/Devices/{{ zenoss4_device }}/{{ greystone_graph_name }}.rrd"
         owner: zenoss
         group: zenoss
       when: "rrdfile.stat.exists == True"
