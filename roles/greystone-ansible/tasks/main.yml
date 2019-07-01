@@ -1,0 +1,454 @@
+- name: "Ensure we have a session cookie"
+  uri:
+    url: "https://secure.greystonepower.com/oscp/OnlineServices/FeaturesLogin/tabid/134/Default.aspx"
+    return_content: yes
+    follow_redirects: yes
+    http_agent: "{{ user_agent }}"
+  register: session
+
+- name: "Creating dictionary with form values to submit for data: _VIEWSTATE"
+  #ignore_errors: true
+  vars:
+   key: "__VIEWSTATE"
+   value: "{{item | replace('<input type=\"hidden\" name=\"__VIEWSTATE\" id=\"__VIEWSTATE\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"__VIEWSTATE\"' in item"
+  with_items: "{{ session.content.split('\n') }}"
+
+- name: "Creating dictionary with form values to submit for data: _VIEWSTATE"
+  #ignore_errors: true
+  vars:
+   key: "__VIEWSTATEGENERATOR"
+   value: "{{item | replace('<input type=\"hidden\" name=\"__VIEWSTATEGENERATOR\" id=\"__VIEWSTATEGENERATOR\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"__VIEWSTATEGENERATOR\"' in item"
+  with_items: "{{ session.content.split('\n') }}"
+
+- name: "Creating dictionary with form values to submit for data: ScriptManager_TSM"
+  #ignore_errors: true
+  vars:
+   key: "ScriptManager_TSM"
+   value: "{{item | replace('<script src=\"/OSCP/Telerik.Web.UI.WebResource.axd?_TSM_HiddenField_=ScriptManager_TSM&amp;compress=1&amp;_TSM_CombinedScripts_=','') | replace('\" type=\"text/javascript\"></script>','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'/OSCP/Telerik.Web.UI.WebResource.axd' in item"
+  with_items: "{{ session.content.split('\n') }}"
+
+- name: "Getting session"
+  debug:
+   msg: "{{ session.cookies }}"
+
+- name: "Getting result variable"
+  debug:
+   msg: "{{ result }}"
+
+- name: "URLdecode the TSM string"
+  shell: |
+    echo "{{ result['ScriptManager_TSM'] | replace('+',' ') }}" | python -c "import sys, urllib as ul; print ul.unquote(sys.stdin.read());"
+  args:
+    executable: /bin/bash
+  register: STSM
+
+- name: "Getting urldecoded"
+  debug:
+   msg: "{{ STSM }}"
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: Ensure logged into website using a previously stored cookie and credentials
+  #ignore_errors: yes
+  uri:
+    url: https://secure.greystonepower.com/oscp/OnlineServices/FeaturesLogin/tabid/134/Default.aspx
+    method: POST
+    body_format: form-urlencoded
+    http_agent: "{{ user_agent }}"
+    follow_redirects: yes
+    body:
+      ScriptManager: dnn$ctr661$FeatureLogin$UpdatePanel1|dnn$ctr661$FeatureLogin$btnLogin
+      StylesheetManager_TSSM: 
+      ScriptManager_TSM: "{{ STSM.stdout }}"
+      __LASTFOCUS: 
+      __EVENTTARGET: 
+      __EVENTARGUMENT: 
+      __VIEWSTATE: "{{ result['__VIEWSTATE'] }}"
+      __VIEWSTATEGENERATOR: "{{ result['__VIEWSTATEGENERATOR'] }}"
+      dnn$ctr661$FeatureLogin$txtUsername: "{{ greystone_account_number }}"
+      dnn$ctr661$FeatureLogin$txtPassword: "{{ greystone_account_password }}"
+      dnn$ctr661$FeatureLogin$hdnLoginCaptchaIsEnabled: false
+      ScrollTop: 
+      __dnnVariable: "{\"__scdoff\":\"1\",\"sf_siteRoot\":\"/oscp/\",\"sf_tabId\":\"134\"}"
+      AppID: OSCP
+      hidSmartApp: 0
+      hidParam484: 1
+      hidEnableRedirection: true
+      __ASYNCPOST: true
+      dnn$ctr661$FeatureLogin$btnLogin: Login
+    status_code: [200,302]
+    return_content: yes
+    headers:
+      #Cookie: "{{ session.set_cookie }}"
+      #Cookie: "{{ session.set_cookie }} {{ Cstring }}" 
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}"
+      User-Agent: "{{ user_agent }}"
+      Accept: "*/*"
+      Accept-Encoding: gzip, deflate, br
+      Accept-Language: en-US,en;q=0.9
+      Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+      DNT: 1
+      Host: secure.greystonepower.com
+      Origin: https://secure.greystonepower.com
+      Referer: https://secure.greystonepower.com/oscp/OnlineServices/FeaturesLogin/tabid/134/Default.aspx
+      #X-MicrosoftAjax: Delta=true
+      #X-Requested-With: XMLHttpRequest
+  register: loggedin
+
+- name: "Ensure API URL is obtained"
+  #ignore_errors: true
+  vars:
+   key: "oscpUrl"
+   value: "{{item | replace('window.top.LoginOnlineForm(','') | trim }}"
+  set_fact:
+   oscp: "{{ oscp | combine( { key: value } ) }}"
+  when: "'onlineform/CreateOSCPUserSession.aspx' in item"
+  with_items: "{{ loggedin.content.split('\n') }}"
+
+- name: "Clean API URL"
+  shell: echo "{{ oscp['oscpUrl'] }}" | sed -e "s/^'//g" | sed -e "s/');//g"
+  register: oscpUrl
+
+- name: "Set fact for API URL"
+  set_fact:
+    oscpUrl: "{{ oscpUrl.stdout }}"
+
+- name: dump new session variables, control c here
+  debug:
+    var: oscpUrl
+
+- name: "Ensure API username is obtained"
+  #ignore_errors: true
+  vars:
+   key: "oscpUsername"
+   value: "{{item | regex_replace('window.top.LoginOnlineForm(.*)CreateOSCPUserSession.aspx','') | replace('oscpUsername=','') | regex_replace('oscpPassword(.*)','') | trim }}"
+  set_fact:
+   oscp: "{{ oscp | combine( { key: value } ) }}"
+  when: "'onlineform/CreateOSCPUserSession.aspx' in item"
+  with_items: "{{ loggedin.content.split('\n') }}"
+
+- name: "Ensure API password is obtained"
+  #ignore_errors: true
+  vars:
+   key: "oscpPassword"
+   value: "{{item | regex_replace('window.top.LoginOnlineForm(.*)oscpPassword=','') | trim  }}"
+  set_fact:
+   oscp: "{{ oscp | combine( { key: value } ) }}"
+  when: "'onlineform/CreateOSCPUserSession.aspx' in item"
+  with_items: "{{ loggedin.content.split('\n') }}"
+
+- name: clean username
+  shell: echo "{{ oscp['oscpUsername'] }}" | tr -d '?&'
+  register: oscpUsername
+
+- name: clean password
+  shell: echo "{{ oscp['oscpPassword'] }}" | sed -e "s/');//g"
+  register: oscpPassword
+
+- name: "Ensure API password is obtained"
+  set_fact:
+   oscp:
+     oscpUsername: "{{ oscpUsername.stdout }}"
+     oscpPassword: "{{ oscpPassword.stdout }}"
+
+- name: dump new session variables, control c here
+  debug:
+    var: oscp
+
+- name: dump loggedin session cookies
+  debug:
+    var: loggedin.cookies
+    #var: loggedin.set_cookie
+
+- name: dump new session cookies
+  debug:
+    var: session.cookies
+    #var: session.set_cookie
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: POST to oscp url so we have a session cookie
+  uri:
+    method: POST
+    url: "https://secure.greystonepower.com{{ oscpUrl }}"
+    return_content: yes
+    follow_redirects: yes
+    http_agent: "{{ user_agent }}"
+    headers:
+      User-Agent: "{{ user_agent }}"
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}" 
+      Accept: "*/*"
+      Accept-Encoding: gzip, deflate, br
+      Accept-Language: en-US,en;q=0.9
+      Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+      DNT: 1
+      Origin: https://secure.greystonepower.com
+      Referer: https://secure.greystonepower.com/oscp/OnlineServices/FeaturesLogin/tabid/134/Default.aspx
+      X-MicrosoftAjax: Delta=true
+      X-Requested-With: XMLHttpRequest
+  register: oscpsession
+
+- name: "dump oscp session variables, control c here"
+  debug:
+    var: oscpsession
+
+- name: "dump cookies we will use, control c here"
+  debug:
+    msg: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}"
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: "Ensure we have a session cookie"
+  uri:
+    url: https://secure.greystonepower.com/oscp/
+    return_content: yes
+    follow_redirects: yes
+    http_agent: "{{ user_agent }}"
+    headers:
+      User-Agent: "{{ user_agent }}"
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}" 
+  register: session_continued
+
+- name: dump oscp session variables, control c here
+  debug:
+    var: session_continued
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: ensure we have a meter
+  uri:
+    url: https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/UsageHistoryDescription/tabid/265/Default.aspx
+    return_content: yes
+    follow_redirects: yes
+    http_agent: "{{ user_agent }}"
+    headers:
+      User-Agent: "{{ user_agent }}"
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}" 
+  register: session_continued
+
+- name: dump meter page, control c here
+  debug:
+    var: session_continued
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: "Creating dictionary with form values to submit for data: _VIEWSTATE"
+  #ignore_errors: true
+  vars:
+   key: "__VIEWSTATE"
+   value: "{{item | replace('<input type=\"hidden\" name=\"__VIEWSTATE\" id=\"__VIEWSTATE\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"__VIEWSTATE\"' in item"
+  with_items: "{{ session_continued.content.split('\n') }}"
+
+- name: "Creating dictionary with form values to submit for data: _VIEWSTATEGENERATOR"
+  #ignore_errors: true
+  vars:
+   key: "__VIEWSTATEGENERATOR"
+   value: "{{item | replace('<input type=\"hidden\" name=\"__VIEWSTATEGENERATOR\" id=\"__VIEWSTATEGENERATOR\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"__VIEWSTATEGENERATOR\"' in item"
+  with_items: "{{ session_continued.content.split('\n') }}"
+
+- name: "Creating dictionary with form values to submit for data: mbrsephidden"
+  #ignore_errors: true
+  vars:
+   key: "mbrsephidden"
+   value: "{{item | replace('<input type=\"hidden\" name=\"dnn$ctr1307$AccountList$gvAccountList$ctl02$mbrsephidden\" id=\"dnn_ctr1307_AccountList_gvAccountList_mbrsephidden_0\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"dnn_ctr1307_AccountList_gvAccountList_mbrsephiddenhidden_0\"' in item"
+  with_items: "{{ session_continued.content.split('\n') }}"
+
+- name: "Creating dictionary with form values to submit for data: meterhidden"
+  #ignore_errors: true
+  vars:
+   key: "meterhidden"
+   value: "{{item | replace('<input type=\"hidden\" name=\"dnn$ctr1307$AccountList$gvAccountList$ctl02$meterhidden\" id=\"dnn_ctr1307_AccountList_gvAccountList_meterhidden_0\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"dnn_ctr1307_AccountList_gvAccountList_meterhidden_0\"' in item"
+  with_items: "{{ session_continued.content.split('\n') }}"
+
+- name: "Creating dictionary with form values to submit for data: balancehidden"
+  #ignore_errors: true
+  vars:
+   key: "balancehidden"
+   value: "{{item | replace('<input type=\"hidden\" name=\"dnn$ctr1307$AccountList$gvAccountList$ctl02$balancehidden\" id=\"dnn_ctr1307_AccountList_gvAccountList_balancehidden_0\" value=\"','') | replace('\" />','') | trim }}"
+  set_fact:
+   result: "{{ result | combine( { key: value } ) }}"
+  when: "'id=\"dnn_ctr1307_AccountList_gvAccountList_balancehidden_0\"' in item"
+  with_items: "{{ session_continued.content.split('\n') }}"
+
+- name: dump variables
+  debug:
+    var: result
+
+
+- name: Ensure logged into website using a previously stored cookie and credentials
+  #ignore_errors: yes
+  uri:
+    url: https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/UsageHistoryDescription/tabid/265/Default.aspx
+    method: POST
+    body_format: form-urlencoded
+    http_agent: "{{ user_agent }}"
+    follow_redirects: yes
+    body:
+      ScriptManager: dnn$ctr1307$AccountList$UpdatePanel1|dnn$ctr1307$AccountList$btnContinue
+      StylesheetManager_TSSM: 
+      ScriptManager_TSM: "{{ STSM.stdout }}"
+      __EVENTTARGET: 
+      __EVENTARGUMENT: 
+      __VIEWSTATE: "{{ result['__VIEWSTATE'] }}"
+      __VIEWSTATEGENERATOR: "{{ result['__VIEWSTATEGENERATOR'] }}"
+      __VIEWSTATEENCRYPTED: 
+      dnn$ctr1307$AccountList$gvAccountList$ctl02$R: lblRadioButtonHolder
+      dnn$ctr1307$AccountList$gvAccountList$ctl02$mbrsephidden: "{{ greystone_internal_acctnum }}"
+      dnn$ctr1307$AccountList$gvAccountList$ctl02$meterhidden: "{{ result['meterhidden'] }}"
+      dnn$ctr1307$AccountList$gvAccountList$ctl02$formIDhidden: 
+      dnn$ctr1307$AccountList$gvAccountList$ctl02$DiscSoNbrhidden: 
+      dnn$ctr1307$AccountList$gvAccountList$ctl02$balancehidden: "{{ result['balancehidden'] }}"
+      dnn$ctr1307$AccountList$gvAccountList$ctl03$mbrsephidden:
+      dnn$ctr1307$AccountList$gvAccountList$ctl03$meterhidden:
+      dnn$ctr1307$AccountList$gvAccountList$ctl03$formIDhidden: 
+      dnn$ctr1307$AccountList$gvAccountList$ctl03$DiscSoNbrhidden: 
+      dnn$ctr1307$AccountList$gvAccountList$ctl03$balancehidden:
+      dnn$ctr1307$AccountList$hdnMeter: "{{ greystone_meter_number }}"
+      dnn$ctr1307$AccountList$hdnMbrSep: "{{ greystone_internal_acctnum }}"
+      dnn$ctr1307$AccountList$hdnDisableMbrSep: 
+      dnn$ctr1307$AccountList$hdnOnlineFormData: 
+      dnn$ctr1307$AccountList$hdnFormId: 
+      dnn$ctr1307$AccountList$hdnSoNbr: 
+      dnn$ctr1307$AccountList$hdnBalance: "{{ result['balancehidden'] }}"
+      dnn$ctr1307$AccountList$hdnArrno: 
+      dnn$ctr1307$AccountList$hdnControl: 
+      ScrollTop: 
+      __dnnVariable: "{\"__scdoff\":\"1\",\"sf_siteRoot\":\"/oscp/\",\"sf_tabId\":\"265\"}"
+      AppID: OSCP
+      hidSmartApp: 0
+      hidParam484: 1
+      hidEnableRedirection: true
+      __ASYNCPOST: true
+      dnn$ctr1307$AccountList$btnContinue: Continue
+    status_code: [200,302]
+    return_content: yes
+    headers:
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}"
+      User-Agent: "{{ user_agent }}"
+      Accept: "*/*"
+      Accept-Encoding: gzip, deflate, br
+      Accept-Language: en-US,en;q=0.9
+      Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+      DNT: 1
+      Host: secure.greystonepower.com
+      Origin: https://secure.greystonepower.com
+      Referer: https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/UsageHistoryDescription/tabid/265/Default.aspx
+      #X-MicrosoftAjax: Delta=true
+      #X-Requested-With: XMLHttpRequest
+  register: pickmeter
+
+- name: dump meter pick results, control c here
+  debug:
+    var: pickmeter
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: ensure we have a session cookie
+  uri:
+    url: https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/MeterUsageList/tabid/266/Default.aspx
+    return_content: yes
+    follow_redirects: yes
+    http_agent: "{{ user_agent }}"
+    headers:
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}"
+      User-Agent: "{{ user_agent }}"
+      Accept: "*/*"
+      Accept-Encoding: gzip, deflate, br
+      Accept-Language: en-US,en;q=0.9
+      Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+      DNT: 1
+      Host: secure.greystonepower.com
+      Origin: https://secure.greystonepower.com
+      Referer: https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/UsageHistoryDescription/tabid/265/Default.aspx
+  register: usage
+
+- name: dump meter pick results, control c here
+  debug:
+    var: usage
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: Get meter daily usage data
+  ignore_errors: yes
+  uri:
+    method: POST
+    url: "https://secure.greystonepower.com/oscp/DesktopModules/MeterUsage/API/MeterData.aspx/GetDailyUsageData"
+    body_format: json
+    body: "{'MemberSep':'{{ greystone_account_number }}','StartDate':'{{ get_start_date }}','EndDate':'{{ get_end_date }}','IsEnergy':'true','IsPPM':'false','IsCostEnable':'3'}"
+    status_code: [200,302]
+    follow_redirects: yes
+    return_content: yes
+    http_agent: "{{ user_agent }}"
+    headers:
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}" 
+      Origin: "https://secure.greystonepower.com"
+      User-Agent: "{{ user_agent }}"
+      Content-Type: "application/json; charset=UTF-8"
+      Accept: "application/json, text/javascript, */*; q=0.01"
+      Referer: "https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/MeterUsageList/tabid/266/Default.aspx"
+      X-Requested-With: XMLHttpRequest
+      DNT: 1
+  register: meterdailydata
+
+- name: wait
+  pause:
+    seconds: 2
+
+- name: "Get how many days in the month for bulk import"
+  set_fact:
+   days_in_month: "{{ lookup('pipe','/usr/bin/python -c \"from calendar import monthrange; print monthrange({{ import_year }}, {{ import_month }})\"')[4:]|replace(')','')|int }}"
+  when: "import_bulk == 'true'"
+
+
+- name: "dump days in month"
+  debug: 
+    var: days_in_month
+  when: "import_bulk == 'true'"
+
+- name: "loop over inclusive dates for meter data"
+  include: meter-data.yml get_start_date="{{ import_month }}/{{ item }}/{{ import_year }}" get_end_date="{{ import_month }}/{{ item }}/{{ import_year }}"
+  with_sequence: start=1 end="{{ days_in_month }}" stride=1
+  when: "import_bulk == 'true'"
+
+- name: "get the meter data for certain days"
+  include: meter-data.yml get_start_date="{{ get_start_date }}" get_end_date="{{ get_end_date }}"
+  when: "import_bulk != 'true'"
+
+- name: "Finished"
+  debug:
+    msg: "Your rrd file and simple graph of the last 24 hrs can be found here: /tmp/{{ greystone_graph_name }}.rrd and /tmp/{{ greystone_graph_name }}.png"

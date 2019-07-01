@@ -1,0 +1,26 @@
+---
+- name: "Ensure only copying when enabled"
+  debug:
+    msg: "You have copy to Zenoss disabled."
+  when: "copy_to_zenoss != 'true'"
+
+- block:
+    - name: "Check if rrdfile exists"
+      stat:
+        path: "/tmp/{{ greystone_graph_name }}.rrd"
+      register: rrdfile
+      delegate_to: localhost
+
+    - name: "Copy rrd file to Zenoss filesystem"
+      copy: 
+        src: "/tmp/{{ greystone_graph_name }}.rrd"
+        dest: "/opt/zenoss/perf/Devices/{{ zenoss4_device }}/"
+        owner: zenoss
+        group: zenoss
+      when: "rrdfile.stat.exists == True"
+
+    - name: "Ensure only copying when enabled"
+      debug:
+        msg: "There is no rrdfile to copy over."
+      when: "rrdfile.stat.exists != True"
+  when: "copy_to_zenoss == 'true'"

@@ -1,0 +1,39 @@
+---
+- name: Get meter interval data
+  ignore_errors: yes
+  uri:
+    method: POST
+    url: https://secure.greystonepower.com/oscp/DesktopModules/MeterUsage/API/MeterData.aspx/GetIntervalData
+    body_format: json
+    http_agent: "{{ user_agent }}"
+    #body: "{\"MemberSep\":\"{{ greystone_account_number }}\",\"StartDate\":\"{{ get_start_date }}\",\"EndDate\":\"{{ get_end_date }}\",\"IntervalType\":\"15\"}"
+    body: "{'MemberSep':'{{ greystone_account_number }}','StartDate':'{{ get_start_date }}','EndDate':'{{ get_end_date }}','IntervalType':'15'}"
+    status_code: [200,302]
+    follow_redirects: yes
+    return_content: yes
+    headers:
+      #Cookie: "{{ session.set_cookie }} {{ loggedin.set_cookie }} {{ Cstring }}" 
+      Cookie: "{{ session.cookies|dictsort|map('join', '=')|join('; ') }}; {{ Cstring }}" 
+      Origin: https://secure.greystonepower.com
+      #Accept-Encoding: gzip, deflate, br
+      #Accept-Language: en-US,en;q=0.9
+      User-Agent: "{{ user_agent }}"
+      Content-Type: application/json; charset=UTF-8
+      Accept: "application/json, text/javascript, */*; q=0.01"
+      Referer: https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/UsageHistory/MeterUsageList/tabid/266/Default.aspx
+      X-Requested-With: XMLHttpRequest
+      DNT: 1
+  register: meterdata
+
+- name:  Check if data is empty
+  debug:
+    msg: "The data returned is empty. Yesterday's data is not ready (run again after 12pm)  or no data returned for this day."
+  when: "meterdata.json.d|length|int < 1"
+
+- name:  create rrd file and graph
+  script: "manage-rrd.py '{{ greystone_graph_name }}' '{{ item.KWH }}' '{{ item.UsageHourDate }}'"
+  with_items: "{{ meterdata.json.d.Items }}"
+
+- name: wait
+  pause:
+    seconds: 2

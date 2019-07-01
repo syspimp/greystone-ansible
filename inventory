@@ -1,0 +1,2 @@
+localhost
+zenoss ansible_host=10.55.3.151 ansible_user=root

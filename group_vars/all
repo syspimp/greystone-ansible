@@ -1,0 +1,32 @@
+---
+# edit these entries
+# you can find this info by logging into
+# https://secure.greystonepower.com/oscp/MyAccount/AccountHistory/BillHistory/BillingHistoryDesription/tabid/252/Default.aspx
+greystone_account_number: XXXXXX0000
+greystone_account_password: mypassword
+greystone_meter_number: YYYYYYYYY
+# what do you want to name your home? used in graph
+greystone_meter_name: "My Home"
+# first 8 digits, then -000, ie xxxxxxxx-000
+greystone_internal_acctnum: XXXXXX0-000
+greystone_graph_name: "Greystone_Power_Greystone_Interval_Power"
+# these are the dates to get for the daily usage
+get_start_date: 06/26/2019
+get_end_date: 06/26/2019
+# these are the dates to get for the 15 min interval usage
+# add as many as you want, doesn't matter the date
+# but rrd only accepts oldest to new
+dates:
+- 06/26/2019
+#- 06/27/2019
+#- 06/28/2019
+# these are used for bulk importing, and normally set via the commandline
+# for example: ansible-playbook -e "import_bulk=true import_month=06 import_year=2019" site.yml
+# This will import all of the month June, if set to 'true'
+import_bulk: 'false'
+import_month: 06
+import_year: 2019
+# for the copy-to-zenoss role
+# enable by setting to 'true'
+copy_to_zenoss: 'false'
+zenoss4_device: 10.55.2.179

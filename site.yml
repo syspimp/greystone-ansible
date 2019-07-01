@@ -1,0 +1,14 @@
+
+---
+- name:  Grab Power Usage from Greystone Power
+  hosts: localhost
+  gather_facts: no
+  roles:
+    - greystone-ansible
+
+# only runs if copy_to_zenoss = 'true' in group_vars/all or via cmdline extra vars
+- name: Copy rrd file to Zenoss
+  hosts: zenoss
+  gather_facts: no
+  roles:
+    - copy-to-zenoss
