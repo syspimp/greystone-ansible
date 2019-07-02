@@ -44,7 +44,7 @@ Who has two thumbs and wants to monitor his power consumption? *This guy*
 
 ## Conclusion?
 
-Well, I will certainly save money over time with my new HVAC. My consumption droped noticeable, visually, after the installation. My power consumption spiked up to 1 kwh twice over a two day period, probably when the 5th stage fan kicked in for a short while, compared to whenever the old system was running.
+Well, I will certainly save money over time with my new HVAC. My consumption dropped noticeable, visually, after the installation. My power consumption spiked up to 1 kwh twice over a two day period, probably when the 5th stage fan kicked in for a short while, compared to whenever the old system was running. The house is a single temperature now!  There is no noticiable humidity in the air, and the system is quiet.  It runs at a very low speed a lot of the time, but the data doesn't reflect much power consumption.  The only thing I don't like is the little pump that runs every so often to drain the water from I assume the dehumidifyer.  But that is a small inconvienience for such low power consumption and a nice, cool house.  I definitely recommend this product.
 
 However, the data seems to suggest that I only eliminate consuming utility power when I produce over 1.5 to 2 kwh of energy, which is basically on a bright, clear, cloudless day, EVEN THOUGH I may only be consuming 0.5 kwh as reported by the utility company. I wonder why this is? Is this the result of electrical resistance? Is there an electrical barrier or wave to overcome, like when rushing creek water meets a river, and the river wants to push into the creek? At some point it equalizes, the water becomes one, and then flows together into the larger river. Once I cross this threshold does the "resistance" drop to my energy production drop according to some function? I have noticed my meter stopped when it is supposed to be running backwards. Hmmm.
 
@@ -56,7 +56,7 @@ Below (and above) is a screen shot of a 4 day period of my energy production and
 
 The last graph is the important one.
 
-I installed the new HVAC on Monday, so you see Sunday and Monday is the old energy consumption. Tuesday, Wednesday, and Friday is the new consumption.  Green is enegery consumed, blue is energy produced.  There is clearly more green on Sunday and Monday, than from Tuesday onwards.
+I installed the new HVAC on Monday, so you see Sunday and Monday is the old energy consumption. The missing solar power on Monday is when they started work in the Breaker Panel and I turned the breaker to the panels off, a few hours later I turned them back on. Monday night the system runs all night to get the humidity out of the air.  Tuesday, Wednesday, and Friday is the new consumption.  Green is energy consumed, blue is energy produced.  There is clearly more green on Sunday and Monday, than from Tuesday onwards.
 
 ![Before and After installing heat pump](https://raw.githubusercontent.com/syspimp/greystone-ansible/master/pics/heat-pump-energy-savings.png)
 
